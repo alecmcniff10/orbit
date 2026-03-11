@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Orbit — Professional Network</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#0b0b0e;color:#ece7dc;font-family:'Inter',sans-serif;font-size:14px;line-height:1.5}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#23232d;border-radius:2px}
+textarea{resize:vertical}a{color:#c9aa71;text-decoration:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useCallback}=React;
+
+// ── Storage helpers ───────────────────────────────────────────────────────────
+const LS={
+  get:(k,def)=>{try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):def;}catch{return def;}},
+  set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}},
+};
+
+// ── Seed contacts ─────────────────────────────────────────────────────────────
+const SEED=[
+  {id:1,name:"Michael Rodriguez",title:"Former CFO",company:"Baylor",industry:"Finance, biotech, education",specialty:"Accounting, Finance",undergrad:"USC",gradSchool:"Stanford",email:"mrr4jc@gmail.com",linkedin:"",firmWebsite:"",birthday:"07-06",howMet:"He has been a mentor since high school, counseling me on all professional milestones and personal achievements",interests:"I'm more likely to reach out with life updates in my personal life than any business-related articles",notes:"",lastContact:"2026-02-16",cadenceDays:180,personalOnly:true},
+  {id:2,name:"Eli Richardson",title:"Federal Judge",company:"U.S. District Court",industry:"Government",specialty:"Litigation",undergrad:"Duke",gradSchool:"Vanderbilt",email:"eli_richardson@tnmd.uscourts.gov",linkedin:"",firmWebsite:"",birthday:"04-25",howMet:"I clerked for Judge Richardson after law school",interests:"I'm more likely to reach out with updates in my personal life",notes:"",lastContact:"2026-02-25",cadenceDays:60,personalOnly:true},
+  {id:3,name:"Adam Dale",title:"Partner",company:"Winston Strawn",industry:"Law Firm",specialty:"Litigation (sports/antitrust)",undergrad:"George Washington",gradSchool:"NYU",email:"AIDale@winston.com",linkedin:"https://www.linkedin.com/in/adamdalenyu/",firmWebsite:"https://www.winston.com/en/professionals/dale-adam-i",birthday:"",howMet:"Cold email expressing interest in sports law. Brief phone call and stayed in touch since",interests:"NIL and the changing landscape in college sports, cases he has worked on at Winston Strawn, awards or achievements",notes:"",lastContact:"2025-06-07",cadenceDays:90,personalOnly:false},
+  {id:4,name:"Dan Werly",title:"COO",company:"Tennessee Titans",industry:"Sports",specialty:"Sports law / in-house",undergrad:"Miami (OH)",gradSchool:"Georgetown",email:"DWerly@titans.nfl.com",linkedin:"https://www.linkedin.com/in/danielwerly/",firmWebsite:"",birthday:"",howMet:"Cold email. Spoke by phone and grabbed lunch about his experience as GC of the Titans",interests:"In-house counsel for sports orgs, Titans news and new stadium, sports law in Nashville, sports law networking events, University of Michigan football or basketball",notes:"Has at least two young boys",lastContact:"2025-04-05",cadenceDays:120,personalOnly:false},
+  {id:5,name:"Jeremy Evans",title:"Attorney",company:"California Sports Lawyer",industry:"Law Firm",specialty:"Sports",undergrad:"UCLA",gradSchool:"Thomas Jefferson",email:"jeremy@csllegal.com",linkedin:"https://www.linkedin.com/in/jeremymevansesq/",firmWebsite:"https://www.csllegal.com/about/",birthday:"",howMet:"Cold email re his podcast. He later helped me become attorney member at large of the Sports and Entertainment Committee of the SD County Bar",interests:"California Sports Lawyer Podcast episodes, sports law developments",notes:"",lastContact:"2025-05-04",cadenceDays:365,personalOnly:false},
+  {id:6,name:"Corey Collins",title:"Assistant GC",company:"In-N-Out Burger",industry:"Food / Retail",specialty:"Litigation background",undergrad:"Westmont College",gradSchool:"UCLA",email:"ccollins@innout.com",linkedin:"https://www.linkedin.com/in/corey-h-collins-ab0710100/",firmWebsite:"",birthday:"",howMet:"Cold email. Talked on the phone about his experience in-house at In-N-Out",interests:"In-N-Out Burger news and business changes, food retail industry generally",notes:"",lastContact:"2025-10-07",cadenceDays:90,personalOnly:false},
+  {id:7,name:"Matt Cottingham",title:"Partner",company:"Hunter Cottingham PLLC",industry:"Law Firm",specialty:"Entertainment",undergrad:"Middle Tennessee",gradSchool:"University of Memphis",email:"",linkedin:"https://www.linkedin.com/in/matthewcottingham/",firmWebsite:"",birthday:"",howMet:"My brother-in-law introduced us. Spoke about his experience as entertainment lawyer and my interest in transactional entertainment work",interests:"Technology affecting artists in entertainment, copyright and AI in the entertainment industry",notes:"",lastContact:"2025-12-05",cadenceDays:120,personalOnly:false},
+  {id:8,name:"Nickolas Taylor",title:"Associate",company:"Knobbe Martens",industry:"Law Firm",specialty:"IP (Trademark)",undergrad:"USC",gradSchool:"Pepperdine",email:"nickolas.taylor@knobbe.com",linkedin:"",firmWebsite:"",birthday:"",howMet:"Cold email expressing interest in trademark law",interests:"Trademark law developments, IP news",notes:"",lastContact:"2026-01-19",cadenceDays:180,personalOnly:false},
+  {id:9,name:"Jon Jekel",title:"Of Counsel",company:"Pillsbury",industry:"Law Firm",specialty:"IP (Trademark/Copyright)",undergrad:"UCSD",gradSchool:"University of San Diego",email:"jon.jekel@pillsburylaw.com",linkedin:"https://www.linkedin.com/in/jonjekel/",firmWebsite:"https://www.pillsburylaw.com/en/lawyers/jon-jekel.html",birthday:"",howMet:"Cold email about trademark. Phone conversation about his path and how I might move into the area",interests:"Trademark law developments, San Diego trademark events, Pillsbury firm news, awards or major cases",notes:"",lastContact:"2026-02-25",cadenceDays:90,personalOnly:false},
+  {id:10,name:"Kristin Strojan",title:"Of Counsel",company:"Kilpatrick Townsend",industry:"Law Firm",specialty:"IP (Trademark)",undergrad:"Maryland",gradSchool:"Cal Western",email:"kstrojan@ktslaw.com",linkedin:"https://www.linkedin.com/in/kristinstrojan/",firmWebsite:"https://ktslaw.com/en/People/S/StrojanKristinG",birthday:"",howMet:"Cold email expressing interest in her trademark law practice",interests:"Trademark law developments, San Diego trademark events, Kilpatrick firm news and major cases",notes:"",lastContact:"2026-02-26",cadenceDays:90,personalOnly:false},
+  {id:11,name:"Nicole Gates Lean",title:"Counsel",company:"Buchanan Ingersoll & Rooney",industry:"Law Firm",specialty:"IP (Transactions)",undergrad:"University of Virginia",gradSchool:"USC",email:"",linkedin:"https://www.linkedin.com/in/nicole-gates-lean-6a4b256/",firmWebsite:"https://www.bipc.com/nicole-g.-lean",birthday:"",howMet:"Connected on LinkedIn given USC background and overlap in trademark law",interests:"Trademark law developments, San Diego trademark events, Buchanan Ingersoll firm news, USC Trojan Alumni events in San Diego",notes:"",lastContact:"2026-02-10",cadenceDays:90,personalOnly:false},
+  {id:12,name:"Todd Patterson",title:"Partner",company:"Patterson & Sheridan LLP",industry:"Law Firm",specialty:"IP",undergrad:"Baylor",gradSchool:"South Texas College of Law",email:"tpatterson@pattersonsheridan.com",linkedin:"https://www.linkedin.com/in/todd-patterson-01b5368/",firmWebsite:"https://www.pattersonsheridan.com/people/b-todd-patterson/",birthday:"",howMet:"Michael Rodriguez introduced us. Spoke about his IP law experience and how I can transition into IP from labor/employment",interests:"Trademark and copyright law developments, Patterson & Sheridan firm news and major cases, Baylor University sports",notes:"",lastContact:"2026-02-17",cadenceDays:120,personalOnly:false},
+  {id:13,name:"Yvette Molinaro",title:"Partner",company:"Mitchell Silberberg & Knupp",industry:"Law Firm",specialty:"Litigation",undergrad:"Unknown",gradSchool:"Southwestern",email:"yxmolinaro@gmail.com",linkedin:"",firmWebsite:"",birthday:"",howMet:"I was an intern at her law firm during college and we have stayed in contact since",interests:"New York Giants football, major wins by Mitchell Silberberg & Knupp",notes:"",lastContact:"2026-02-17",cadenceDays:180,personalOnly:false},
+  {id:14,name:"Emil Petrossian",title:"Partner",company:"Glaser Weil",industry:"Law Firm",specialty:"Litigation",undergrad:"Whitman College",gradSchool:"Loyola",email:"epetrossian@glaserweil.com",linkedin:"https://www.linkedin.com/in/emilpetrossian/",firmWebsite:"https://www.glaserweil.com/team/emil-petrossian",birthday:"",howMet:"Interviewed for a job at his firm, was offered it, and declined",interests:"San Francisco 49ers, Glaser Weil achievements and published news",notes:"",lastContact:"2026-02-17",cadenceDays:180,personalOnly:false},
+  {id:15,name:"Mike Gosling",title:"Color Analyst",company:"ESPN+ / USD Athletics",industry:"Sports Media",specialty:"Former litigator",undergrad:"Stanford",gradSchool:"Stanford",email:"",linkedin:"",firmWebsite:"",birthday:"",howMet:"Worked together at Jones Day early in my career",interests:"USD Baseball, San Diego Padres",notes:"",lastContact:"2026-02-17",cadenceDays:120,personalOnly:false},
+  {id:16,name:"Maggie Adema",title:"Associate",company:"Greines Martin Stein",industry:"Law Firm",specialty:"Litigation",undergrad:"Notre Dame",gradSchool:"Notre Dame",email:"",linkedin:"",firmWebsite:"",birthday:"",howMet:"Worked together at Jones Day early in my career",interests:"Personal updates",notes:"",lastContact:"2026-02-17",cadenceDays:365,personalOnly:true},
+  {id:17,name:"Judge Bumatay",title:"Federal Judge",company:"9th Circuit Court of Appeal",industry:"Government",specialty:"Litigation",undergrad:"Yale",gradSchool:"Harvard",email:"judge_bumatay@ca9.uscourts.gov",linkedin:"",firmWebsite:"",birthday:"",howMet:"I interned for Judge Bumatay the summer after my first year of law school",interests:"Personal updates",notes:"",lastContact:"2024-01-02",cadenceDays:180,personalOnly:true},
+  {id:18,name:"Sidd Dadhich",title:"AUSA",company:"U.S. Attorney's Office (San Diego)",industry:"Government",specialty:"White collar crime",undergrad:"Texas",gradSchool:"Texas",email:"",linkedin:"",firmWebsite:"",birthday:"",howMet:"Worked with Sid while he was clerking for Judge Bumatay",interests:"Personal updates",notes:"",lastContact:"2026-02-17",cadenceDays:180,personalOnly:true},
+  {id:19,name:"Bill Brown",title:"Partner",company:"Brown Wegner",industry:"Law Firm",specialty:"Litigation (some IP)",undergrad:"Air Force Academy",gradSchool:"Arizona State University",email:"bill@brownwegner.com",linkedin:"https://www.linkedin.com/in/wjbrownjr/",firmWebsite:"https://brownwegner.com/attorneys/william-brown/",birthday:"",howMet:"Interviewed with Bill for a position at his firm, was offered it, and declined",interests:"IP litigation events in Orange County",notes:"",lastContact:"2026-03-11",cadenceDays:180,personalOnly:false},
+];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const TODAY=new Date();
+const TODAY_STR=TODAY.toISOString().split("T")[0];
+const T={bg:"#0b0b0e",surf:"#131318",surf2:"#1a1a21",border:"#23232d",accent:"#c9aa71",accentD:"#7a6640",text:"#ece7dc",muted:"#68636e",red:"#c06060",green:"#5a8f6a"};
+
+function daysUntilBirthday(mmdd){if(!mmdd)return null;const[mm,dd]=mmdd.split("-").map(Number);const n=new Date(TODAY.getFullYear(),mm-1,dd);if(n<TODAY)n.setFullYear(TODAY.getFullYear()+1);return Math.ceil((n-TODAY)/86400000);}
+function daysSince(d){if(!d)return null;return Math.floor((TODAY-new Date(d))/86400000);}
+function isHoliday(){const m=TODAY.getMonth()+1,d=TODAY.getDate();return(m===12&&d>=10)||(m===1&&d<=10);}
+function getTriggers(c){const t=[];const bd=daysUntilBirthday(c.birthday);if(bd!==null&&bd<=30)t.push({type:"birthday",label:`🎂 Birthday in ${bd}d`});if(isHoliday())t.push({type:"holiday",label:"🎄 Holiday season"});const ds=daysSince(c.lastContact),cad=c.cadenceDays||180;if(ds===null)t.push({type:"new",label:"✨ Never contacted"});else if(ds>cad)t.push({type:"overdue",label:`⏰ Overdue ${ds-cad}d`});return t;}
+function urgencyScore(c){let s=0;const ds=daysSince(c.lastContact),cad=c.cadenceDays||180;if(ds===null)s+=4;else if(ds>cad)s+=3+Math.floor((ds-cad)/30);const bd=daysUntilBirthday(c.birthday);if(bd!==null&&bd<=14)s+=5;if(isHoliday())s+=2;return s;}
+function cadLabel(d){return({30:"Monthly",60:"Every 2 months",90:"Quarterly",120:"Every 4 months",180:"Twice / year",365:"Once / year"})[d]||`Every ${d}d`;}
+function ini(name){return name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();}
+
+// ── API ───────────────────────────────────────────────────────────────────────
+async function callClaude(prompt,useSearch=false){
+  const body={model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]};
+  if(useSearch)body.tools=[{type:"web_search_20250305",name:"web_search"}];
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  const data=await res.json();
+  return(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+}
+
+async function generateDraft({contact,triggerType,customContext,savedArticles}){
+  const relevant=(savedArticles||[]).filter(a=>!(a.usedFor||[]).includes(contact.id));
+  const artBlock=relevant.length?`\n\nSaved articles (use one if genuinely relevant):\n${relevant.map(a=>`- "${a.title}"${a.note?` — ${a.note}`:""}`).join("\n")}`:"";
+  const reasons={birthday:"Birthday outreach. Warm and personal, 2-3 sentences. No article needed.",holiday:"Holiday/New Year check-in. Genuine and brief. No business agenda.",personal:"Personal check-in. Reference the relationship warmly. Nothing work-related.",industry:`Reference this industry news/trend: "${customContext||"recent developments in their field"}". Explain why you thought of them.`,article:`Share this specific article: "${customContext}". Brief — why it made you think of them.`,event:`Ask about this upcoming event: "${customContext}". Casual — are they going?`,overdue:"Checking in after a while. Light and natural. Reference something relevant to their work.",new:"First follow-up after meeting. Reference how you met. Short and warm."};
+  const needsSearch=!contact.personalOnly&&["industry","overdue","new"].includes(triggerType)&&!customContext&&!relevant.length;
+  const prompt=`Draft a professional networking email. Write like a real person — short, genuine, not a template.
+
+SENDER: Associate at a global law firm in California. Michigan Law grad, USC undergrad. Background in labor/employment, moving toward IP/trademark, sports law, entertainment law.
+
+RECIPIENT:
+- ${contact.name}, ${contact.title} at ${contact.company}
+- Background: ${contact.industry}${contact.specialty?` — ${contact.specialty}`:""}
+- Schools: ${[contact.undergrad,contact.gradSchool].filter(Boolean).join(", ")}
+- How they know each other: ${contact.howMet}
+- Interests / what to reference: ${contact.interests||"topics relevant to their field"}
+- Notes: ${contact.notes||"none"}
+${artBlock}
+
+REASON: ${reasons[triggerType]||reasons.overdue}
+${needsSearch?"Search the web first for a genuinely relevant, recent development related to this person's interests.\n":""}
+2-4 short paragraphs. End with a light, low-pressure close.
+
+Respond ONLY with valid JSON (no markdown):
+{"subject":"subject line","body":"email body"}`;
+  const raw=await callClaude(prompt,needsSearch);
+  try{return JSON.parse(raw.replace(/\`\`\`json|\`\`\`/g,"").trim());}
+  catch{const m=raw.match(/\{[\s\S]*\}/);if(m){try{return JSON.parse(m[0]);}catch{}}return{subject:"Checking in",body:raw};}
+}
+
+async function matchArticles(articles,contacts){
+  if(!articles.length||!contacts.length)return{};
+  const prompt=`Match these articles to the most relevant professional contacts (up to 3 per article).
+Articles:\n${articles.map((a,i)=>`${i+1}. "${a.title}"${a.note?` — ${a.note}`:""}`).join("\n")}
+Contacts:\n${contacts.map(c=>`- ${c.name}: ${c.title} at ${c.company}. Interests: ${c.interests||"general professional topics"}`).join("\n")}
+Respond ONLY with JSON: {"1":["Name"],"2":["Name A","Name B"]}`;
+  const raw=await callClaude(prompt);
+  try{return JSON.parse(raw.replace(/\`\`\`json|\`\`\`/g,"").trim());}catch{return{};}
+}
+
+// ── Shared UI ────────────────────────────────────────────────────────────────
+function Btn({children,onClick,variant="primary",sm,disabled,style:{}}){
+  const b={border:"none",borderRadius:5,fontWeight:500,cursor:disabled?"not-allowed":"pointer",fontSize:sm?11:13,padding:sm?"4px 10px":"8px 16px",opacity:disabled?0.4:1,transition:"opacity .15s,filter .15s",...(arguments[0].style||{})};
+  const v={primary:{background:T.accent,color:"#120f06"},ghost:{background:"transparent",color:T.muted,border:`1px solid ${T.border}`},subtle:{background:T.surf2,color:T.text,border:`1px solid ${T.border}`},danger:{background:"#1e0a0a",color:"#d08080",border:"1px solid #3a1515"},success:{background:"#0a1e0f",color:"#70b07a",border:"1px solid #153a1a"}};
+  return <button style={{...b,...v[variant]}} onClick={onClick} disabled={disabled} onMouseEnter={e=>{if(!disabled)e.currentTarget.style.filter="brightness(1.12)";}} onMouseLeave={e=>{e.currentTarget.style.filter="none";}}>{children}</button>;
+}
+function Inp({value,onChange,placeholder,type="text"}){return <input type={type} value={value} onChange={onChange} placeholder={placeholder} style={{background:T.bg,border:`1px solid ${T.border}`,color:T.text,padding:"7px 10px",borderRadius:5,fontSize:13,outline:"none",transition:"border-color .15s",width:"100%"}} onFocus={e=>e.target.style.borderColor=T.accentD} onBlur={e=>e.target.style.borderColor=T.border}/>;}
+function Txta({value,onChange,placeholder,rows=4}){return <textarea value={value} onChange={onChange} placeholder={placeholder} rows={rows} style={{background:T.bg,border:`1px solid ${T.border}`,color:T.text,padding:"7px 10px",borderRadius:5,fontSize:13,outline:"none",lineHeight:1.6,width:"100%",transition:"border-color .15s",resize:"vertical"}} onFocus={e=>e.target.style.borderColor=T.accentD} onBlur={e=>e.target.style.borderColor=T.border}/>;}
+function Sel({value,onChange,options}){return <select value={value} onChange={onChange} style={{background:T.bg,border:`1px solid ${T.border}`,color:T.text,padding:"7px 10px",borderRadius:5,fontSize:13,outline:"none",width:"100%"}}>{options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>;}
+function Fld({label,children,hint}){return <div style={{display:"flex",flexDirection:"column",gap:4}}><label style={{fontSize:10,color:T.muted,textTransform:"uppercase",letterSpacing:"0.1em"}}>{label}</label>{children}{hint&&<span style={{fontSize:10,color:T.muted}}>{hint}</span>}</div>;}
+function Bdg({children,color="gold"}){const c={gold:{bg:"#1e180a",fg:T.accent,br:"#2e2510"},red:{bg:"#1e0a0a",fg:"#d08080",br:"#3a1515"},green:{bg:"#0a1e0f",fg:"#70b07a",br:"#153a1a"},grey:{bg:T.surf2,fg:T.muted,br:T.border}}[color]||{bg:T.surf2,fg:T.muted,br:T.border};return <span style={{display:"inline-block",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:500,background:c.bg,color:c.fg,border:`1px solid ${c.br}`}}>{children}</span>;}
+function Avt({name,size=38}){return <div style={{width:size,height:size,borderRadius:"50%",flexShrink:0,background:`linear-gradient(135deg,${T.accentD},#3a2a0a)`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Cormorant Garamond',serif",fontSize:size*0.38,color:T.accent,fontWeight:600}}>{ini(name)}</div>;}
+function Back({onClick,label="Back"}){return <button onClick={onClick} style={{background:"none",border:"none",color:T.muted,fontSize:12,cursor:"pointer",marginBottom:20,display:"flex",alignItems:"center",gap:5}}>← {label}</button>;}
+function Spin(){return <div style={{display:"inline-block",width:13,height:13,border:`2px solid ${T.border}`,borderTopColor:T.accent,borderRadius:"50%",animation:"spin .7s linear infinite"}}/>;}
+
+const TRIGS=[{id:"birthday",label:"🎂 Birthday",ctx:false},{id:"holiday",label:"🎄 Holiday / New Year",ctx:false},{id:"personal",label:"👋 Personal check-in",ctx:false},{id:"industry",label:"📰 Industry news / trend",ctx:true,ph:"Describe the topic (e.g. 'NIL reform update')"},{id:"article",label:"📎 Specific article",ctx:true,ph:"Paste article title or URL"},{id:"event",label:"📅 Upcoming event",ctx:true,ph:"Event name and date"},{id:"overdue",label:"📬 Just checking in",ctx:false}];
+const CADOPTS=[{value:"30",label:"Monthly (30d)"},{value:"60",label:"Every 2 months (60d)"},{value:"90",label:"Quarterly (90d)"},{value:"120",label:"Every 4 months (120d)"},{value:"180",label:"Twice a year (180d)"},{value:"365",label:"Once a year (365d)"}];
+const BLANK={id:null,name:"",title:"",company:"",industry:"",specialty:"",undergrad:"",gradSchool:"",email:"",linkedin:"",firmWebsite:"",birthday:"",howMet:"",interests:"",notes:"",lastContact:"",cadenceDays:180,personalOnly:false};
+
+// ── Nav ───────────────────────────────────────────────────────────────────────
+function Nav({view,setView,dueCount,artCount}){
+  const tabs=[{id:"dashboard",label:"Outreach",badge:dueCount},{id:"contacts",label:"Contacts"},{id:"articles",label:"Article Inbox",badge:artCount},{id:"digest",label:"Weekly Digest"}];
+  return <nav style={{background:T.surf,borderBottom:`1px solid ${T.border}`,position:"sticky",top:0,zIndex:50,padding:"0 24px"}}><div style={{maxWidth:960,margin:"0 auto",display:"flex",alignItems:"center",height:52}}><span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,color:T.accent,marginRight:32,letterSpacing:"0.06em",fontWeight:600}}>ORBIT</span>{tabs.map(tab=><button key={tab.id} onClick={()=>setView(tab.id)} style={{background:"none",border:"none",height:"100%",padding:"0 13px",color:view===tab.id?T.accent:T.muted,fontSize:13,fontWeight:500,borderBottom:view===tab.id?`2px solid ${T.accent}`:"2px solid transparent",cursor:"pointer",transition:"color .15s",display:"flex",alignItems:"center",gap:5}}>{tab.label}{tab.badge>0&&<span style={{background:"#3a2510",color:T.accent,border:`1px solid ${T.accentD}`,borderRadius:10,fontSize:10,padding:"1px 6px",fontWeight:600}}>{tab.badge}</span>}</button>)}</div></nav>;
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+function Dashboard({contacts,onSelect,onDraft,onMark}){
+  const due=[...contacts].map(c=>({...c,score:urgencyScore(c),triggers:getTriggers(c)})).filter(c=>c.score>0).sort((a,b)=>b.score-a.score);
+  if(!due.length)return <div style={{textAlign:"center",padding:"100px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12}}>✓</div><div style={{fontSize:16,color:T.text}}>All caught up.</div><div style={{fontSize:13,marginTop:6}}>No outreach due right now.</div></div>;
+  return <div><div style={{marginBottom:26}}><h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:600}}>Outreach Queue</h1><p style={{color:T.muted,fontSize:13,marginTop:4}}>{due.length} {due.length===1?"contact":"contacts"} due{isHoliday()?" · Holiday season — good time to check in with everyone":""}</p></div><div style={{display:"flex",flexDirection:"column",gap:10}}>{due.map(c=><div key={c.id} style={{background:T.surf,border:`1px solid ${T.border}`,borderRadius:9,padding:"14px 18px",display:"flex",alignItems:"center",gap:14,animation:"fi .25s ease"}}><Avt name={c.name}/><div style={{flex:1,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap",marginBottom:3}}><span style={{fontWeight:500,fontSize:14}}>{c.name}</span>{c.triggers.map((t,i)=><Bdg key={i} color={t.type==="birthday"?"gold":t.type==="holiday"?"green":"red"}>{t.label}</Bdg>)}</div><div style={{fontSize:11,color:T.muted}}>{c.title} · {c.company}{c.lastContact?` · Last: ${c.lastContact}`:" · Never contacted"}</div></div><div style={{display:"flex",gap:7,flexShrink:0}}><Btn sm variant="ghost" onClick={()=>onSelect(c)}>View</Btn><Btn sm variant="ghost" onClick={()=>onMark(c.id)}>✓ Done</Btn><Btn sm onClick={()=>onDraft(c,c.triggers[0]?.type||"overdue")}>Draft Email</Btn></div></div>)}</div></div>;
+}
+
+// ── Contact List ──────────────────────────────────────────────────────────────
+function ContactList({contacts,onSelect,onAdd}){
+  const [q,setQ]=useState("");
+  const filtered=contacts.filter(c=>`${c.name} ${c.company} ${c.industry} ${c.specialty}`.toLowerCase().includes(q.toLowerCase()));
+  return <div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}><h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:600}}>Contacts</h1><Btn onClick={onAdd}>+ Add Contact</Btn></div><Inp value={q} onChange={e=>setQ(e.target.value)} placeholder="Search by name, company, specialty…"/><div style={{display:"flex",flexDirection:"column",gap:7,marginTop:14}}>{filtered.map(c=>{const score=urgencyScore(c);return <div key={c.id} onClick={()=>onSelect(c)} style={{background:T.surf,border:`1px solid ${T.border}`,borderRadius:7,padding:"12px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:12,transition:"border-color .15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=T.accentD} onMouseLeave={e=>e.currentTarget.style.borderColor=T.border}><Avt name={c.name} size={34}/><div style={{flex:1}}><span style={{fontWeight:500}}>{c.name}</span><span style={{color:T.muted,fontSize:12,marginLeft:8}}>{c.title} · {c.company}</span></div><div style={{display:"flex",gap:6}}>{c.birthday&&<Bdg color="gold">🎂</Bdg>}{score>0?<Bdg color="red">Due</Bdg>:c.lastContact?<Bdg color="green">On track</Bdg>:<Bdg color="grey">New</Bdg>}</div></div>;})}</div></div>;
+}
+
+// ── Contact Detail ────────────────────────────────────────────────────────────
+function ContactDetail({contact:c,onEdit,onDelete,onDraft,onMark,onBack}){
+  const triggers=getTriggers(c);const bd=daysUntilBirthday(c.birthday);
+  return <div><Back onClick={onBack} label="Back to contacts"/><div style={{background:T.surf,border:`1px solid ${T.border}`,borderRadius:10,padding:28,animation:"fi .2s ease"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:22}}><div style={{display:"flex",gap:16,alignItems:"center"}}><Avt name={c.name} size={52}/><div><h2 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:24,fontWeight:600}}>{c.name}</h2><div style={{color:T.muted,fontSize:13,marginTop:2}}>{c.title} · {c.company}</div>{c.linkedin&&<a href={c.linkedin} target="_blank" rel="noreferrer" style={{fontSize:11,color:T.accentD,marginTop:3,display:"block"}}>↗ LinkedIn</a>}{c.firmWebsite&&<a href={c.firmWebsite} target="_blank" rel="noreferrer" style={{fontSize:11,color:T.accentD,display:"block"}}>↗ Firm Profile</a>}</div></div><div style={{display:"flex",gap:7}}><Btn sm variant="ghost" onClick={onEdit}>Edit</Btn><Btn sm variant="danger" onClick={onDelete}>Delete</Btn></div></div>{triggers.length>0&&<div style={{background:"#110e05",border:`1px solid ${T.accentD}`,borderRadius:7,padding:"10px 14px",marginBottom:20}}><div style={{fontSize:10,color:T.accentD,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:7}}>Outreach triggers</div><div style={{display:"flex",gap:7,flexWrap:"wrap"}}>{triggers.map((t,i)=><Bdg key={i} color={t.type==="birthday"?"gold":t.type==="holiday"?"green":"red"}>{t.label}</Bdg>)}</div></div>}<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:20}}>{[["Email",c.email||"—"],["Industry / Specialty",[c.industry,c.specialty].filter(Boolean).join(" · ")||"—"],["Undergrad",c.undergrad||"—"],["Law / Grad School",c.gradSchool||"—"],["How You Met",c.howMet||"—"],["Birthday",c.birthday?`${c.birthday}${bd!==null?` (in ${bd}d)`:""}`:"—"],["Last Contact",c.lastContact||"Never"],["Cadence",cadLabel(c.cadenceDays)]].map(([l,v])=><div key={l}><div style={{fontSize:10,color:T.muted,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>{l}</div><div style={{fontSize:13,lineHeight:1.5}}>{v}</div></div>)}</div>{c.interests&&<div style={{marginBottom:14}}><div style={{fontSize:10,color:T.muted,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>Interests / Topics to Reference</div><div style={{fontSize:13,lineHeight:1.6}}>{c.interests}</div></div>}{c.notes&&<div style={{marginBottom:20}}><div style={{fontSize:10,color:T.muted,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>Notes</div><div style={{fontSize:13,lineHeight:1.6}}>{c.notes}</div></div>}<div style={{borderTop:`1px solid ${T.border}`,paddingTop:18,display:"flex",gap:8}}><Btn onClick={()=>onDraft(c,triggers[0]?.type||(c.personalOnly?"personal":"overdue"))}>Draft Email</Btn><Btn variant="ghost" onClick={()=>onMark(c.id)}>Mark Contacted Today</Btn></div></div></div>;
+}
+
+// ── Contact Form ──────────────────────────────────────────────────────────────
+function ContactForm({contact,onSave,onBack}){
+  const [f,setF]=useState({...BLANK,...(contact||{})});
+  const s=(k,v)=>setF(p=>({...p,[k]:v}));
+  return <div><Back onClick={onBack}/><h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:24,fontWeight:600,marginBottom:20}}>{contact?.id?"Edit Contact":"New Contact"}</h1><div style={{background:T.surf,border:`1px solid ${T.border}`,borderRadius:10,padding:28}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}><Fld label="Full Name *"><Inp value={f.name} onChange={e=>s("name",e.target.value)} placeholder="Jane Smith"/></Fld><Fld label="Email"><Inp value={f.email} onChange={e=>s("email",e.target.value)} placeholder="jane@firm.com"/></Fld><Fld label="Title / Role"><Inp value={f.title} onChange={e=>s("title",e.target.value)} placeholder="Partner, VP…"/></Fld><Fld label="Company"><Inp value={f.company} onChange={e=>s("company",e.target.value)} placeholder="Firm or company"/></Fld><Fld label="Industry"><Inp value={f.industry} onChange={e=>s("industry",e.target.value)} placeholder="Law, Finance, Sports…"/></Fld><Fld label="Specialty"><Inp value={f.specialty} onChange={e=>s("specialty",e.target.value)} placeholder="Trademark, Litigation, M&A…"/></Fld><Fld label="Undergrad"><Inp value={f.undergrad} onChange={e=>s("undergrad",e.target.value)} placeholder="USC, Yale…"/></Fld><Fld label="Law / Grad School"><Inp value={f.gradSchool} onChange={e=>s("gradSchool",e.target.value)} placeholder="Michigan Law…"/></Fld><Fld label="LinkedIn URL"><Inp value={f.linkedin} onChange={e=>s("linkedin",e.target.value)} placeholder="https://linkedin.com/in/…"/></Fld><Fld label="Firm Website"><Inp value={f.firmWebsite} onChange={e=>s("firmWebsite",e.target.value)} placeholder="https://…"/></Fld><Fld label="Birthday (MM-DD)" hint="Only if natural for you to know"><Inp value={f.birthday} onChange={e=>s("birthday",e.target.value)} placeholder="07-15"/></Fld><Fld label="Last Contact Date"><Inp type="date" value={f.lastContact} onChange={e=>s("lastContact",e.target.value)}/></Fld><Fld label="Cadence"><Sel value={String(f.cadenceDays)} onChange={e=>s("cadenceDays",parseInt(e.target.value))} options={CADOPTS}/></Fld><Fld label="Personal Contact Only"><div style={{display:"flex",alignItems:"center",gap:8,paddingTop:8}}><input type="checkbox" checked={f.personalOnly} onChange={e=>s("personalOnly",e.target.checked)} id="po"/><label htmlFor="po" style={{fontSize:12,color:T.muted,cursor:"pointer"}}>Skip article matching — personal check-ins only</label></div></Fld></div><div style={{marginTop:14,display:"grid",gap:14}}><Fld label="How You Met"><Txta value={f.howMet} onChange={e=>s("howMet",e.target.value)} placeholder="ABA conference 2023, cold email, mutual intro…" rows={2}/></Fld><Fld label="Interests / Topics to Reference" hint="More specific = better drafts: teams, publications, local events"><Txta value={f.interests} onChange={e=>s("interests",e.target.value)} placeholder="NIL developments, Titans stadium, Michigan football, SD trademark events…" rows={3}/></Fld><Fld label="Notes"><Txta value={f.notes} onChange={e=>s("notes",e.target.value)} placeholder="Relationship context, things to reference, personal details…" rows={2}/></Fld></div><div style={{marginTop:20,display:"flex",gap:8}}><Btn onClick={()=>{if(f.name)onSave({...f,id:f.id||Date.now()});}} disabled={!f.name}>Save</Btn><Btn variant="ghost" onClick={onBack}>Cancel</Btn></div></div></div>;
+}
+
+// ── Trigger Modal ─────────────────────────────────────────────────────────────
+function TriggerModal({contact,defaultTrigger,onClose,onGenerate}){
+  const [sel,setSel]=useState(defaultTrigger||"overdue");const [ctx,setCtx]=useState("");
+  const def=TRIGS.find(t=>t.id===sel);
+  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.78)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}><div style={{background:T.surf,border:`1px solid ${T.border}`,borderRadius:10,padding:26,width:440,maxWidth:"92vw",animation:"fi .15s ease"}} onClick={e=>e.stopPropagation()}><h3 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:19,marginBottom:4}}>Draft email to {contact.name}</h3><p style={{color:T.muted,fontSize:12,marginBottom:18}}>What prompted this outreach?</p><div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:14}}>{TRIGS.map(t=><label key={t.id} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"9px 13px",borderRadius:7,fontSize:13,background:sel===t.id?"#110e05":"transparent",border:`1px solid ${sel===t.id?T.accentD:T.border}`,color:sel===t.id?T.accent:T.text,transition:"all .12s"}}><input type="radio" checked={sel===t.id} onChange={()=>setSel(t.id)} style={{display:"none"}}/>{t.label}</label>)}</div>{def?.ctx&&<div style={{marginBottom:14}}><Txta value={ctx} onChange={e=>setCtx(e.target.value)} placeholder={def.ph} rows={2}/></div>}<div style={{display:"flex",gap:8}}><Btn onClick={()=>onGenerate(sel,ctx)}>Generate Draft</Btn><Btn variant="ghost" onClick={onClose}>Cancel</Btn></div></div></div>;
+}
+
+// ── Draft View ────────────────────────────────────────────────────────────────
+function DraftView({data,onChange,onSent,onRegen,onBack}){
+  const {contact,subject,body,loading,triggerType,customContext}=data;
+  const needsSearch=!contact.personalOnly&&["industry","overdue","new"].includes(triggerType)&&!customContext;
+  function openGmail(){const p=new URLSearchParams({to:contact.email||"",su:subject,body});window.open(`https://mail.google.com/mail/?view=cm&fs=1&${p}`,"_blank");onSent(contact.id);}
+  return <div><Back onClick={onBack} label="Back to dashboard"/><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}><div><h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:24,fontWeight:600}}>Draft Email</h1><p style={{color:T.muted,fontSize:12,marginTop:3}}>To: {contact.name} · {contact.email||"no email on file"}</p></div><Btn sm variant="ghost" onClick={onRegen} disabled={loading}>↺ Regenerate</Btn></div>{loading?<div style={{background:T.surf,border:`1px solid ${T.border}`,borderRadius:10,padding:60,textAlign:"center",animation:"fi .2s ease"}}><Spin/><div style={{color:T.muted,fontSize:13,marginTop:14}}>Drafting email…</div>{needsSearch&&<div style={{color:T.accentD,fontSize:12,marginTop:6}}>Searching for relevant news first…</div>}</div>:<div style={{background:T.surf,border:`1px solid ${T.border}`,borderRadius:10,padding:28,animation:"fi .2s ease"}}><Fld label="Subject"><Inp value={subject} onChange={e=>onChange(d=>({...d,subject:e.target.value}))}/></Fld><div style={{marginTop:16}}><Fld label="Body"><Txta value={body} onChange={e=>onChange(d=>({...d,body:e.target.value}))} rows={13}/></Fld></div><div style={{marginTop:20,display:"flex",gap:8,alignItems:"center"}}><Btn onClick={openGmail} disabled={!contact.email}>Open in Gmail →</Btn><Btn variant="ghost" onClick={onBack}>Discard</Btn>{!contact.email&&<span style={{fontSize:11,color:T.red}}>No email on file — add it in their profile first.</span>}</div></div>}</div>;
+}
+
+// ── Article Inbox ─────────────────────────────────────────────────────────────
+function ArticleInbox({articles,contacts,onAdd,onDelete}){
+  const [url,setUrl]=useState("");const [title,setTitle]=useState("");const [note,setNote]=useState("");
+  const [matching,setMatching]=useState(false);const [matches,setMatches]=useState(null);
+  async function handleAdd(){if(!title&&!url)return;onAdd({id:Date.now(),url,title:title||url,note,addedOn:TODAY_STR,usedFor:[]});setUrl("");setTitle("");setNote("");}
+  async function handleMatch(){setMatching(true);const res=await matchArticles(articles,contacts.filter(c=>!c.personalOnly));setMatches(res);setMatching(false);}
+  return <div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:600}}>Article Inbox</h1><Btn variant="ghost" sm onClick={handleMatch} disabled={matching||!articles.length}>{matching?<><Spin/> Matching…</>:"✦ Match to Contacts"}</Btn></div><p style={{color:T.muted,fontSize:13,marginBottom:22}}>Save articles as you find them. When you draft an email, the AI pulls from these before searching the web.</p><div style={{background:T.surf,border:`1px solid ${T.border}`,borderRadius:9,padding:20,marginBottom:20}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}><Fld label="Article Title"><Inp value={title} onChange={e=>setTitle(e.target.value)} placeholder="e.g. NIL Reform Could Reshape College Sports"/></Fld><Fld label="URL (optional)"><Inp value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://…"/></Fld></div><div style={{marginBottom:12}}><Fld label="Your Note (optional)"><Inp value={note} onChange={e=>setNote(e.target.value)} placeholder="Why you saved this, who it might be relevant for…"/></Fld></div><Btn onClick={handleAdd} disabled={!title&&!url}>+ Save Article</Btn></div>{matches&&<div style={{background:"#110e05",border:`1px solid ${T.accentD}`,borderRadius:9,padding:18,marginBottom:20,animation:"fi .2s ease"}}><div style={{fontSize:12,color:T.accentD,fontWeight:500,marginBottom:12}}>Article → Contact Matches</div>{articles.map((a,i)=>{const matched=matches[String(i+1)]||[];return <div key={a.id} style={{marginBottom:12}}><div style={{fontSize:13,fontWeight:500,marginBottom:5}}>"{a.title}"</div>{matched.length?<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{matched.map(n=><Bdg key={n} color="gold">{n}</Bdg>)}</div>:<span style={{fontSize:12,color:T.muted}}>No strong matches found</span>}</div>;})}</div>}{!articles.length?<div style={{textAlign:"center",padding:"40px 0",color:T.muted,fontSize:13}}>No articles saved yet.</div>:<div style={{display:"flex",flexDirection:"column",gap:8}}>{articles.map(a=><div key={a.id} style={{background:T.surf,border:`1px solid ${T.border}`,borderRadius:7,padding:"13px 16px",display:"flex",alignItems:"flex-start",gap:12}}><div style={{flex:1}}><div style={{fontWeight:500,fontSize:13}}>{a.url?<a href={a.url} target="_blank" rel="noreferrer">{a.title}</a>:a.title}</div>{a.note&&<div style={{fontSize:12,color:T.muted,marginTop:3}}>{a.note}</div>}<div style={{fontSize:11,color:T.muted,marginTop:4}}>Added {a.addedOn}</div></div><Btn sm variant="danger" onClick={()=>onDelete(a.id)}>Remove</Btn></div>)}</div>}</div>;
+}
+
+// ── Digest ────────────────────────────────────────────────────────────────────
+function WeeklyDigest({contacts}){
+  const due=[...contacts].map(c=>({...c,score:urgencyScore(c),triggers:getTriggers(c)})).filter(c=>c.score>0).sort((a,b)=>b.score-a.score);
+  const [copied,setCopied]=useState(false);
+  const text=`ORBIT — Weekly Outreach Digest\n${new Date().toDateString()}\n\n${due.length>0?`DUE FOR OUTREACH (${due.length}):\n${due.map(c=>`  • ${c.name} — ${c.company} | ${c.triggers.map(t=>t.label).join(", ")}`).join("\n")}`:"No contacts currently due."}`;
+  function copy(){navigator.clipboard.writeText(text).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});}
+  function emailSelf(){const p=new URLSearchParams({su:"Orbit — Weekly Outreach Digest",body:text});window.open(`https://mail.google.com/mail/?view=cm&fs=1&${p}`,"_blank");}
+  return <div><h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:600,marginBottom:6}}>Weekly Digest</h1><p style={{color:T.muted,fontSize:13,marginBottom:22}}>Preview of this week's digest. Your Google Apps Script sends this automatically every Sunday.</p><div style={{background:T.surf,border:`1px solid ${T.border}`,borderRadius:9,padding:20,marginBottom:16,fontFamily:"monospace",fontSize:12,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{text}</div><div style={{display:"flex",gap:9}}><Btn onClick={copy}>{copied?"✓ Copied":"Copy Text"}</Btn><Btn variant="ghost" onClick={emailSelf}>Email to Myself</Btn></div></div>;
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+function App(){
+  const [contacts,setContacts]=useState(()=>LS.get("orbit_contacts",SEED));
+  const [articles,setArticles]=useState(()=>LS.get("orbit_articles",[]));
+  const [view,setView]=useState("dashboard");
+  const [selected,setSelected]=useState(null);
+  const [draftData,setDraftData]=useState(null);
+  const [modal,setModal]=useState(null);
+  const [toast,setToast]=useState(null);
+
+  useEffect(()=>LS.set("orbit_contacts",contacts),[contacts]);
+  useEffect(()=>LS.set("orbit_articles",articles),[articles]);
+
+  function notify(msg,type="success"){setToast({msg,type});setTimeout(()=>setToast(null),3000);}
+  function markContacted(id){setContacts(p=>p.map(c=>c.id===id?{...c,lastContact:TODAY_STR}:c));notify("Marked as contacted today");}
+  function saveContact(c){setContacts(p=>{const e=p.find(x=>x.id===c.id);return e?p.map(x=>x.id===c.id?c:x):[...p,c];});}
+  function deleteContact(id){setContacts(p=>p.filter(c=>c.id!==id));setView("contacts");notify("Contact deleted");}
+
+  async function openDraft(contact,triggerType,customContext=""){
+    setModal(null);
+    setDraftData({contact,triggerType,customContext,subject:"",body:"",loading:true});
+    setView("draft");
+    try{const result=await generateDraft({contact,triggerType,customContext,savedArticles:articles});setDraftData(d=>({...d,...result,loading:false}));}
+    catch(e){setDraftData(d=>({...d,subject:"Error",body:"Could not generate draft. Check your connection and try again.",loading:false}));}
+  }
+
+  const dueCount=contacts.filter(c=>urgencyScore(c)>0).length;
+
+  return <div style={{minHeight:"100vh",background:T.bg}}>
+    {toast&&<div style={{position:"fixed",top:18,right:18,zIndex:999,background:toast.type==="success"?"#0a1e0f":"#1e0a0a",color:toast.type==="success"?"#70b07a":"#d08080",border:`1px solid ${toast.type==="success"?"#153a1a":"#3a1515"}`,padding:"9px 16px",borderRadius:7,fontSize:13,fontWeight:500,animation:"fi .15s ease"}}>{toast.msg}</div>}
+    <Nav view={view} setView={setView} dueCount={dueCount} artCount={articles.length}/>
+    <div style={{maxWidth:960,margin:"0 auto",padding:"32px 20px"}}>
+      {view==="dashboard"&&<Dashboard contacts={contacts} onSelect={c=>{setSelected(c);setView("contact-detail");}} onDraft={(c,t)=>setModal({contact:c,trigger:t})} onMark={markContacted}/>}
+      {view==="contacts"&&<ContactList contacts={contacts} onSelect={c=>{setSelected(c);setView("contact-detail");}} onAdd={()=>{setSelected(null);setView("add-contact");}}/>}
+      {view==="contact-detail"&&selected&&<ContactDetail contact={contacts.find(c=>c.id===selected.id)||selected} onEdit={()=>setView("add-contact")} onDelete={()=>deleteContact(selected.id)} onDraft={(c,t)=>setModal({contact:c,trigger:t})} onMark={markContacted} onBack={()=>setView("contacts")}/>}
+      {view==="add-contact"&&<ContactForm contact={selected} onSave={c=>{saveContact(c);setSelected(c);setView("contact-detail");notify("Contact saved");}} onBack={()=>setView(selected?"contact-detail":"contacts")}/>}
+      {view==="draft"&&draftData&&<DraftView data={draftData} onChange={setDraftData} onSent={id=>{markContacted(id);notify("Gmail opened — contact marked as contacted");}} onRegen={()=>openDraft(draftData.contact,draftData.triggerType,draftData.customContext)} onBack={()=>setView("dashboard")}/>}
+      {view==="articles"&&<ArticleInbox articles={articles} contacts={contacts} onAdd={a=>setArticles(p=>[a,...p])} onDelete={id=>setArticles(p=>p.filter(a=>a.id!==id))}/>}
+      {view==="digest"&&<WeeklyDigest contacts={contacts}/>}
+    </div>
+    {modal&&<TriggerModal contact={modal.contact} defaultTrigger={modal.trigger} onClose={()=>setModal(null)} onGenerate={(type,ctx)=>openDraft(modal.contact,type,ctx)}/>}
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
